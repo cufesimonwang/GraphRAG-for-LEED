@@ -1,0 +1,74 @@
+# GraphRAG Configuration Template
+
+# Paths
+paths:
+  raw_pdf_dir: "data/raw"
+  output_dir: "data/output"
+  processed_dir: "data/processed"
+  faiss_index: "data/output/embeddings/index"
+  prompts_file: "config/prompts.yaml"
+
+# Processing mode
+mode: "hybrid" # Options: 'rag', 'graphrag', 'hybrid'
+
+# LLM Configuration
+llm:
+  provider: "openai" # Options: 'openai', 'anthropic', 'local'
+  model_name: "gpt-4-turbo-preview"
+  api_key: "YOUR_API_KEY_HERE" # Replace with your API key
+  temperature: 0.3
+  max_tokens: 1024
+
+# Model Registry
+model_registry:
+  # Add your model paths here
+  "gpt-4-turbo-preview": "gpt-4-turbo-preview"
+  "claude-3-opus": "claude-3-opus"
+
+# Model Settings
+model_settings:
+  local:
+    device: "cuda" # or "cpu"
+    load_in_8bit: true
+    torch_dtype: "float16"
+    use_flash_attention: true
+    max_batch_size: 4
+
+# Graph Settings
+graph:
+  entity_colors:
+    CREDIT: "#FFB6C1" # Light pink
+    PREREQUISITE: "#98FB98" # Light green
+    POINT: "#87CEEB" # Sky blue
+    CATEGORY: "#DDA0DD" # Plum
+    CONCEPT: "#F0E68C" # Khaki
+  layout_seed: 42
+
+# Extraction Settings
+extraction:
+  relation_types:
+    - requires
+    - contributes_to
+    - is_part_of
+    - has_requirement
+    - related_to
+    - depends_on
+    - influences
+    - affects
+    - supports
+    - enables
+
+# Output Settings
+output:
+  graph_prefix: "knowledge_graph"
+  graph_formats:
+    - json
+    - html
+    - png
+    - graphml
+  return_triples: false
+
+# Logging Settings
+logging:
+  level: "INFO"
+  log_file: "logs/graphrag.log"

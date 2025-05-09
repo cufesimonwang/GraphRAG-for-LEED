@@ -82,3 +82,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Configuration files with sensitive data
+config/config.yaml
+config/prompts.yaml
