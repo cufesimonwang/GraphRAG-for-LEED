@@ -1,220 +1,102 @@
-# GraphRAG for LEED
+# GraphRAG-for-LEED
 
-A knowledge graph-based Retrieval Augmented Generation (GraphRAG) system for LEED certification materials. This system processes LEED documentation to build a comprehensive knowledge graph, enabling intelligent question answering about LEED requirements and processes.
+A GraphRAG (Graph-based Retrieval Augmented Generation) system for processing and analyzing LEED (Leadership in Energy and Environmental Design) documentation.
 
-## 🌟 Features
+## Author
 
-### Content Processing
+Simon Wang
 
-- **Multi-format Support**: Process PDFs, Excel files, CSV, DOCX, and TXT files
-- **Vision-based Extraction**: Extract relationships from diagrams using GPT-4-Vision
-- **Text & Table Processing**: Extract structured information from text and tables
-- **Configurable Prompts**: Customize extraction and inference prompts via YAML
+- GitHub: [cufesimonwang](https://github.com/cufesimonwang)
+- Project: [GraphRAG-for-LEED](https://github.com/cufesimonwang/GraphRAG-for-LEED)
 
-### Knowledge Graph Construction
+## Overview
 
-- **Entity Extraction**: Identify LEED credits, prerequisites, and concepts
-- **Relation Extraction**: Extract relationships between entities using LLMs
-- **Graph Management**: Build, visualize, and export knowledge graphs
-- **Multiple Export Formats**: JSON, JSONL, CSV, TTL, GraphML, HTML, and PNG visualizations
-- **Configurable Colors**: Customize entity colors and themes
+This project implements a GraphRAG system specifically designed for LEED documentation. It combines the power of knowledge graphs with traditional RAG (Retrieval Augmented Generation) to provide more accurate and contextually relevant information retrieval and generation.
 
-### Retrieval & Generation
+## Features
 
-- **Hybrid Retrieval**: Combine RAG and GraphRAG approaches for optimal results
-- **Context-aware Generation**: Generate responses with proper context
-- **Source Attribution**: Include source information in responses
-- **Diagnostic Mode**: Enable raw triple extraction for debugging
+- Knowledge graph construction from LEED documentation
+- Hybrid retrieval combining graph-based and vector-based approaches
+- Support for multiple document formats (PDF, DOCX, TXT)
+- Configurable LLM integration (OpenAI, Anthropic, Local models)
+- Interactive visualization of knowledge graphs
+- Comprehensive test suite
 
-## 📁 Project Structure
-
-```
-.
-├── src/
-│   ├── kg/                    # Knowledge Graph components
-│   │   ├── kg_builder.py     # Main KG builder
-│   │   ├── kg_extractor.py   # Entity/relation extraction
-│   │   └── graph_manager.py  # Graph operations
-│   ├── retriever/            # Retrieval components
-│   │   └── retriever.py      # Hybrid retriever implementation
-│   ├── generator/            # Generation components
-│   │   └── generator.py      # Response generator
-│   └── content_extractor.py  # Content extraction
-├── config/                   # Configuration files
-│   ├── config.yaml          # Main configuration
-│   └── prompts.yaml         # Prompt templates
-├── data/                    # Data directories
-│   ├── raw/                # Original input files
-│   ├── processed/          # Intermediate processed files
-│   │   ├── rag/           # RAG processed files
-│   │   └── graphrag/      # GraphRAG processed files
-│   └── output/            # Final output files
-├── models/                 # Local model storage
-├── logs/                  # Log files
-└── debug/                # Debug outputs
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.10+
-- OpenAI API key (for GPT-4 and GPT-4-Vision)
-- Required Python packages (see `requirements.txt`)
-
-### Installation
-
-1. Clone the repository:
+## Installation
 
 ```bash
-git clone https://github.com/yourusername/GraphRAG-for-LEED.git
+# Clone the repository
+git clone https://github.com/cufesimonwang/GraphRAG-for-LEED.git
 cd GraphRAG-for-LEED
+
+# Install the package
+pip install -e .
 ```
 
-2. Create and activate a virtual environment:
+## Configuration
+
+1. Copy the example config file:
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+cp config/config.yaml.example config/config.yaml
 ```
 
-3. Install dependencies:
+2. Update the configuration with your settings:
+
+- Add your OpenAI API key
+- Configure the processing mode (rag, graphrag, or hybrid)
+- Set up paths and other parameters
+
+## Usage
 
 ```bash
-pip install -r requirements.txt
+# Process files using the GraphRAG pipeline
+python src/main.py --config config.yaml --mode graphrag --input ./data/raw --output ./data/processed
 ```
 
-4. Configure the system:
-   - Copy `config.example.yaml` to `config.yaml`
-   - Add your OpenAI API key
-   - Adjust other settings as needed
-   - Customize prompts in `prompts.yaml` if desired
+## Project Structure
 
-### Usage
+```
+GraphRAG-for-LEED/
+├── config/             # Configuration files
+├── data/              # Data directories
+│   ├── raw/          # Input files
+│   ├── processed/    # Intermediate files
+│   └── output/       # Final outputs
+├── src/              # Source code
+│   ├── kg/          # Knowledge graph components
+│   ├── retriever/   # Retrieval components
+│   └── generator/   # Generation components
+├── tests/            # Test files
+├── notebooks/        # Jupyter notebooks
+└── docs/            # Documentation
+```
 
-1. Place your LEED documents in the `data/raw/` directory:
+## Development
 
 ```bash
-cp /path/to/your/leed/documents/* data/raw/
-```
-
-2. Process the documents:
-
-```bash
-python src/content_extractor.py
-```
-
-3. Build the knowledge graph:
-
-```bash
-python src/kg/kg_builder.py
-```
-
-4. Run the QA system:
-
-```bash
-python src/main.py --query "What are the requirements for LEED Energy and Atmosphere credits?"
-```
-
-## ⚙️ Configuration
-
-The system is configured through two main YAML files:
-
-### config.yaml
-
-```yaml
-# Mode Configuration
-mode: "hybrid" # Options: "rag", "graphrag", "hybrid"
-
-# Paths Configuration
-paths:
-  data_dir: "./data"
-  raw_dir: "./data/raw"
-  processed_dir: "./data/processed"
-  output_dir: "./data/output"
-  rag_dir: "./data/processed/rag"
-  graphrag_dir: "./data/processed/graphrag"
-  model_dir: "./models"
-  logs_dir: "./logs"
-
-# LLM Configuration
-llm:
-  provider: "openai"
-  model_name: "gpt-4-turbo-preview"
-  temperature: 0.1
-  max_tokens: 1000
-```
-
-### prompts.yaml
-
-```yaml
-# Knowledge Graph Extraction Prompts
-kg_extraction:
-  default_prompt: |
-    Extract entities and their relationships from the text...
-  structured_triple_prompt: |
-    Extract entities and their relationships in the form of structured triples...
-
-# Entity Type Inference Prompts
-entity_inference:
-  default_prompt: |
-    Analyze the entity and determine its type...
-
-# Relation Type Inference Prompts
-relation_inference:
-  default_prompt: |
-    Analyze the relationship between entities...
-```
-
-## 🔧 Development
-
-### Adding New Features
-
-1. **New Content Types**:
-
-   - Add support in `content_extractor.py`
-   - Update configuration in `config.yaml`
-
-2. **Custom Prompts**:
-
-   - Add new prompts to `prompts.yaml`
-   - Update prompt handling in relevant modules
-
-3. **Graph Visualization**:
-   - Customize colors in `config.yaml`
-   - Add new export formats in `graph_manager.py`
-
-### Testing
-
-Run tests with:
-
-```bash
+# Run tests
 pytest tests/
+
+# Install development dependencies
+pip install -e ".[dev]"
 ```
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📚 Citation
+## Acknowledgments
 
-If you use this project in your research, please cite:
-
-```bibtex
-@software{graphrag_leed,
-  author = {Your Name},
-  title = {GraphRAG for LEED},
-  year = {2024},
-  url = {https://github.com/yourusername/GraphRAG-for-LEED}
-}
-```
+- LEED documentation and standards
+- OpenAI for GPT models
+- NetworkX for graph operations
+- LangChain for RAG components
