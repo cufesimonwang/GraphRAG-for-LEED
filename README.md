@@ -2,13 +2,6 @@
 
 A GraphRAG (Graph-based Retrieval Augmented Generation) system for processing and analyzing LEED (Leadership in Energy and Environmental Design) documentation.
 
-## Author
-
-Simon Wang
-
-- GitHub: [cufesimonwang](https://github.com/cufesimonwang)
-- Project: [GraphRAG-for-LEED](https://github.com/cufesimonwang/GraphRAG-for-LEED)
-
 ## Overview
 
 This project implements a GraphRAG system specifically designed for LEED documentation. It combines the power of knowledge graphs with traditional RAG (Retrieval Augmented Generation) to provide more accurate and contextually relevant information retrieval and generation.
@@ -100,3 +93,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - OpenAI for GPT models
 - NetworkX for graph operations
 - LangChain for RAG components
+
+## Author
+
+Simon Wang
+
+- Email: cufesimonwang@gmail.com
