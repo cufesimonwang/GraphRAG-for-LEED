@@ -17,6 +17,8 @@ from .kg_builder import KnowledgeGraphBuilder
 from .graph_manager import GraphConstructor
 from .kg_extractor import KnowledgeGraphExtractor
 from ..content_extractor import ContentExtractor
+from .graph_manager import GraphManager
+from .graph_visualizer import GraphVisualizer
 
 __version__ = "0.1.0"
 __author__ = "GraphRAG Team"
@@ -27,4 +29,6 @@ __all__ = [
     "GraphConstructor",
     "KnowledgeGraphExtractor",
     "ContentExtractor",
+    "GraphManager",
+    "GraphVisualizer"
 ]

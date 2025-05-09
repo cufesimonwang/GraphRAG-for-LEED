@@ -3,9 +3,10 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 import json
 import yaml
-from src.content_extractor import ContentExtractor
-from src.kg.kg_extractor import KnowledgeGraphExtractor
-from src.kg.graph_constructor import GraphConstructor
+from ..content_extractor import ContentExtractor
+from .kg_extractor import KnowledgeGraphExtractor
+from .graph_visualizer import GraphVisualizer
+from .graph_manager import GraphManager
 
 # Set up logging
 logging.basicConfig(
@@ -30,7 +31,7 @@ class KnowledgeGraphBuilder:
     - Analyzing raw triple extraction results
     """
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = "config/config.yaml"):
         """Initialize the knowledge graph builder with configuration."""
         # Load configuration
         with open(config_path, 'r') as f:
@@ -39,7 +40,8 @@ class KnowledgeGraphBuilder:
         # Initialize components
         self.content_extractor = ContentExtractor(config_path)
         self.kg_extractor = KnowledgeGraphExtractor(config_path)
-        self.graph_constructor = GraphConstructor()
+        self.graph_manager = GraphManager(config_path)
+        self.graph_visualizer = GraphVisualizer(config_path)
         
         # Set up paths
         self.data_dir = Path(self.config['paths']['raw_pdf_dir'])
@@ -122,7 +124,7 @@ class KnowledgeGraphBuilder:
         
         # Build the graph
         logger.info("Building knowledge graph...")
-        self.graph_constructor.build_graph(list(all_entities.values()), all_relations)
+        self.graph_manager.build_graph(list(all_entities.values()), all_relations)
         
         # Save results
         self._save_graph_outputs()
@@ -160,12 +162,12 @@ class KnowledgeGraphBuilder:
         # Save in each format
         for fmt in output_formats:
             output_path = self.output_dir / f'{self.output_prefix}.{fmt}'
-            self.graph_constructor.save_graph(output_path, format=fmt)
+            self.graph_visualizer.save_graph(self.graph_manager.graph, output_path, format=fmt)
             logger.info(f"Saved graph in {fmt} format to {output_path}")
     
     def _save_graph_stats(self):
         """Save graph statistics to a JSON file."""
-        stats = self.graph_constructor.get_graph_stats()
+        stats = self.graph_visualizer.get_graph_stats(self.graph_manager.graph)
         stats_path = self.output_dir / f'{self.output_prefix}_stats.json'
         
         with open(stats_path, 'w') as f:

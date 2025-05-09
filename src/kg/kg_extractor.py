@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class KnowledgeGraphExtractor:
     """Extracts entities and relationships from text using LLMs."""
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = "config/config.yaml"):
         """Initialize the knowledge graph extractor."""
         self.config = self._load_config(config_path)
         self.prompts = self._load_prompts()
@@ -100,7 +100,7 @@ class KnowledgeGraphExtractor:
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             filename=log_config.get("log_file", "kg_extractor.log")
         )
-
+    
     def _init_llm_client(self):
         """Initialize the LLM client based on configuration."""
         provider = self.llm_config.get("provider")
@@ -257,33 +257,43 @@ class KnowledgeGraphExtractor:
         return list(entities.values())
     
     def _generate_entity_id(self, text: str) -> str:
-        """Generate a stable entity ID from text."""
-        # Convert to slug format while preserving semantic differences
-        base_id = text.lower().replace(' ', '_')
-        base_id = ''.join(c for c in base_id if c.isalnum() or c == '_')
-        return base_id
+        """Generate a unique ID for an entity."""
+        return slugify(text, separator='_')
     
     def _infer_entity_type(self, text: str, context: str = "") -> str:
-        """Infer the type of an entity using LLM."""
+        """Infer the type of an entity."""
         prompt = self._get_prompt("kg_extraction", "entity_type_inference", text=text, context=context)
         response = self._get_llm_response(prompt)
-        return response.strip()
+        return response.strip().upper()
     
     def _infer_relation_type(self, source: str, target: str, context: str = "") -> str:
-        """Infer the type of relationship between entities using LLM."""
+        """Infer the type of relationship between entities."""
         prompt = self._get_prompt("kg_extraction", "relation_type_inference", source=source, target=target, context=context)
         response = self._get_llm_response(prompt)
         return self._normalize_relation(response.strip())
     
     def _normalize_relation(self, relation: str) -> str:
-        """Normalize relation using the relation map."""
-        relation = relation.lower().replace(' ', '_')
-        return relation if relation in self.relation_map else 'related_to'
+        """Normalize relation type to a standard form."""
+        relation = relation.lower().strip()
+        # Map to standard relation types if possible
+        for standard_type in self.relation_map:
+            if standard_type in relation or relation in standard_type:
+                return standard_type
+        return relation
     
     def process(self, text: str, return_triples: bool = False) -> Union[
         Tuple[List[Dict], List[Dict]], Tuple[List[Dict], List[Dict], List[Dict]]
     ]:
-        """Process text to extract entities and relations."""
+        """
+        Process text to extract entities and relations.
+        
+        Args:
+            text: Text to process
+            return_triples: Whether to return raw triples
+            
+        Returns:
+            Tuple of (entities, relations) or (entities, relations, triples)
+        """
         # Extract triples
         triples = self._extract_triples(text)
         
@@ -293,32 +303,33 @@ class KnowledgeGraphExtractor:
         # Extract relations
         relations = []
         for triple in triples:
-            subject_id = self._generate_entity_id(triple['subject'])
-            object_id = self._generate_entity_id(triple['object'])
-            relation_type = self._infer_relation_type(triple['subject'], triple['object'])
-            
-            relations.append({
-                'source': subject_id,
-                'target': object_id,
-                'type': relation_type,
-                'source_text': triple.get('source_text', text)
-            })
+            subject = triple.get('subject', '')
+            obj = triple.get('object', '')
+            if subject and obj:
+                relation_type = self._infer_relation_type(subject, obj, text)
+                relations.append({
+                    'source': self._generate_entity_id(subject),
+                    'target': self._generate_entity_id(obj),
+                    'type': relation_type,
+                    'source_text': triple.get('source_text', '')
+                })
         
         if return_triples:
             return entities, relations, triples
         return entities, relations
     
     def extract_triplet_dict(self, text: str) -> List[Dict]:
-        """
-        Extract raw triplets from text (for testing).
-        
-        Args:
-            text: Input text
-            
-        Returns:
-            List of triple dictionaries
-        """
-        return self._extract_triples(text)
+        """Extract triples and return as a list of dictionaries."""
+        triples = self._extract_triples(text)
+        return [
+            {
+                'subject': t.get('subject', ''),
+                'predicate': t.get('predicate', ''),
+                'object': t.get('object', ''),
+                'source_text': t.get('source_text', '')
+            }
+            for t in triples
+        ]
     
     def process_file(self, file_path: Path) -> Dict:
         """
@@ -334,21 +345,15 @@ class KnowledgeGraphExtractor:
             - chunks: List of text chunks (for RAG/hybrid mode)
             - metadata: File metadata
         """
-        # Process file using content extractor
-        result = self.content_extractor.process_file(file_path, output_format="jsonl")
+        # Extract text from file
+        content = self.content_extractor.process_file(file_path, mode=self.mode)
         
-        # Extract knowledge graph elements
-        entities, relations = self.process(result["text"])
-        
-        # Add relationships from diagrams if any
-        if result["relationships"]:
-            diagram_entities, diagram_relations = self.process("\n".join(result["relationships"]))
-            entities.extend(diagram_entities)
-            relations.extend(diagram_relations)
+        # Extract entities and relations
+        entities, relations = self.process(content['text'])
         
         return {
-            "entities": entities,
-            "relations": relations,
-            "chunks": result["chunks"],
-            "metadata": result["metadata"]
+            'entities': entities,
+            'relations': relations,
+            'chunks': content.get('chunks', []),
+            'metadata': content.get('metadata', {})
         } 

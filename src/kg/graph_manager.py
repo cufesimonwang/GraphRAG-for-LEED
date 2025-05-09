@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 from pyvis.network import Network
 import yaml
 from datetime import datetime
-c
+
 logger = logging.getLogger(__name__)
 
 class GraphManager:
     """Manages the knowledge graph construction and operations."""
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = "config/config.yaml"):
         """Initialize the graph manager."""
         self.config = self._load_config(config_path)
         self.prompts = self._load_prompts()

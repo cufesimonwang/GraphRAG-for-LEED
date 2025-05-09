@@ -35,10 +35,21 @@ class ContentExtractor:
         
         # Initialize text splitter for RAG
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.config.get('chunking', {}).get('chunk_size', 1000),
-            chunk_overlap=self.config.get('chunking', {}).get('chunk_overlap', 200),
+            chunk_size=self.config.get('chunking', {}).get('chunk_size', 500),
+            chunk_overlap=self.config.get('chunking', {}).get('chunk_overlap', 100),
             length_function=len,
-            separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""]
+            separators=[
+                "\n\n",
+                "\n",
+                ". ",
+                "! ",
+                "? ",
+                "; ",
+                ": ",
+                ", ",
+                " ",
+                ""
+            ]
         )
         
         # Initialize vision handler if enabled
@@ -169,11 +180,14 @@ class ContentExtractor:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_base = f"{file_path.stem}_{timestamp}"
         
+        logger.info(f"Step 1: Extracting raw content from {file_path}")
         # Extract content based on file type
         content = self._extract_content(file_path)
+        logger.info(f"Raw content extraction complete. Found {len(content['text'])} text chunks")
         
         # Process for RAG if needed
         if mode in ["rag", "hybrid"]:
+            logger.info("Step 2: Processing content for RAG")
             rag_content = self._process_for_rag(content, file_path)
             rag_output = self.rag_dir / f"{output_base}_rag.jsonl"
             self._save_jsonl(rag_content, rag_output)
@@ -181,7 +195,13 @@ class ContentExtractor:
         
         # Process for GraphRAG if needed
         if mode in ["graphrag", "hybrid"]:
-            graphrag_content = self._process_for_graphrag(content, file_path)
+            logger.info("Step 3: Processing content for GraphRAG")
+            # First chunk the text into smaller pieces
+            chunked_content = self._chunk_text_for_graphrag(content)
+            logger.info(f"Text chunking complete. Created {len(chunked_content['text'])} chunks")
+            
+            # Then extract entities and relations
+            graphrag_content = self._process_for_graphrag(chunked_content, file_path)
             graphrag_output = self.graphrag_dir / f"{output_base}_graphrag.json"
             self._save_json(graphrag_content, graphrag_output)
             logger.info(f"Saved GraphRAG content to {graphrag_output}")
@@ -197,6 +217,47 @@ class ContentExtractor:
                 'file_size': file_path.stat().st_size
             }
         }
+
+    def _chunk_text_for_graphrag(self, content: Dict) -> Dict:
+        """Chunk text into smaller pieces for GraphRAG processing.
+        
+        Args:
+            content: Dictionary containing extracted content
+            
+        Returns:
+            Dictionary with chunked text
+        """
+        chunked_content = {
+            'text': [],
+            'metadata': content.get('metadata', {})
+        }
+        
+        # Get chunking parameters from config
+        chunk_size = self.config.get('chunking', {}).get('chunk_size', 1000)
+        chunk_overlap = self.config.get('chunking', {}).get('chunk_overlap', 200)
+        
+        logger.info(f"Chunking text with size {chunk_size} and overlap {chunk_overlap}")
+        
+        # Process each text item
+        for text_item in content['text']:
+            text = text_item['text']
+            page = text_item['page']
+            
+            # Split text into chunks
+            chunks = self.text_splitter.split_text(text)
+            
+            # Add each chunk with metadata
+            for i, chunk in enumerate(chunks):
+                chunked_content['text'].append({
+                    'text': chunk,
+                    'page': page,
+                    'chunk_index': i,
+                    'total_chunks': len(chunks)
+                })
+            
+            logger.debug(f"Split page {page} into {len(chunks)} chunks")
+        
+        return chunked_content
 
     def process_directory(self, directory_path: Path, output_format: str = "jsonl") -> List[Dict]:
         """Process all supported files in a directory.
@@ -305,6 +366,7 @@ class ContentExtractor:
         try:
             # Open PDF
             doc = fitz.open(file_path)
+            logger.info(f"Opened PDF with {len(doc)} pages")
             
             # Extract metadata
             content['metadata'] = {
@@ -324,6 +386,7 @@ class ContentExtractor:
                         'page': page_num + 1,
                         'text': text
                     })
+                    logger.debug(f"Extracted text from page {page_num + 1}")
                 
                 # Extract images
                 image_list = page.get_images()
@@ -350,7 +413,9 @@ class ContentExtractor:
                             'y1': image_rect.y1
                         }
                     })
+                    logger.debug(f"Extracted image {img_index + 1} from page {page_num + 1}")
             
+            logger.info(f"PDF extraction complete. Extracted {len(content['text'])} text chunks and {len(content['images'])} images")
             return content
             
         except Exception as e:
@@ -424,53 +489,133 @@ class ContentExtractor:
 
     def _process_for_rag(self, content: Dict, file_path: Path) -> List[Dict]:
         """Process content for RAG by chunking text and preparing for embedding."""
+        logger.info("Starting RAG processing")
         chunks = []
-        chunk_size = self.config.get('extraction', {}).get('chunk_size', 1000)
-        chunk_overlap = self.config.get('extraction', {}).get('chunk_overlap', 200)
+        chunk_size = self.config.get('extraction', {}).get('chunk_size', 500)
+        chunk_overlap = self.config.get('extraction', {}).get('chunk_overlap', 100)
+        
+        logger.info(f"Using chunk size: {chunk_size}, overlap: {chunk_overlap}")
         
         # Process text chunks
-        for text_item in content['text']:
+        total_text_items = len(content['text'])
+        logger.info(f"Processing {total_text_items} text items")
+        
+        for i, text_item in enumerate(content['text'], 1):
             text = text_item['text']
             page = text_item['page']
             
-            # Split into chunks
-            start = 0
-            while start < len(text):
-                end = start + chunk_size
-                if end > len(text):
-                    end = len(text)
-                else:
-                    # Try to find a good break point
-                    break_chars = ['. ', '! ', '? ', '\n']
-                    for char in break_chars:
-                        pos = text.rfind(char, start, end)
-                        if pos != -1:
-                            end = pos + len(char)
-                            break
+            logger.info(f"Processing text item {i}/{total_text_items} from page {page}")
+            
+            if not text.strip():
+                logger.debug(f"Skipping empty text item {i}")
+                continue
+            
+            try:
+                # Split into chunks using the text splitter
+                text_chunks = self.text_splitter.split_text(text)
+                logger.info(f"Split text item {i} into {len(text_chunks)} chunks")
                 
-                chunk = text[start:end].strip()
-                if chunk:
+                for j, chunk in enumerate(text_chunks):
+                    if not chunk.strip():
+                        logger.debug(f"Skipping empty chunk {j} from text item {i}")
+                        continue
+                        
                     chunks.append({
                         'text': chunk,
                         'metadata': {
                             'source': str(file_path),
                             'page': page,
-                            'chunk_index': len(chunks),
-                            'start_char': start,
-                            'end_char': end
+                            'chunk_index': j,
+                            'total_chunks': len(text_chunks),
+                            'text_item_index': i,
+                            'total_text_items': total_text_items
                         }
                     })
+                    logger.debug(f"Added chunk {j+1}/{len(text_chunks)} from text item {i}")
                 
-                start = end - chunk_overlap
+            except Exception as e:
+                logger.error(f"Error processing text item {i}: {e}")
+                continue
         
+        logger.info(f"RAG processing complete. Created {len(chunks)} total chunks")
         return chunks
 
     def _process_for_graphrag(self, content: Dict, file_path: Path) -> Dict:
         """Process content for GraphRAG by extracting entities and relationships."""
-        # TODO: Implement GraphRAG processing
-        # This should extract entities and relationships from the content
-        # and prepare it for knowledge graph construction
-        raise NotImplementedError("GraphRAG processing not implemented yet")
+        # Initialize result structure
+        result = {
+            'entities': [],
+            'relations': [],
+            'metadata': content.get('metadata', {})
+        }
+        
+        total_chunks = len(content['text'])
+        logger.info(f"Starting GraphRAG processing with {total_chunks} text chunks")
+        
+        # Initialize OpenAI client
+        client = OpenAI(api_key=self.config['llm']['api_key'])
+        
+        # Process each text chunk
+        for i, text_item in enumerate(content['text'], 1):
+            text = text_item['text']
+            page = text_item['page']
+            chunk_index = text_item.get('chunk_index', i)
+            total_chunks_in_page = text_item.get('total_chunks', 1)
+            
+            logger.info(f"Processing chunk {i}/{total_chunks} (chunk {chunk_index}/{total_chunks_in_page} from page {page})")
+            
+            # Skip empty chunks
+            if not text.strip():
+                logger.debug(f"Skipping empty chunk {i}")
+                continue
+            
+            # Extract entities and relations using LLM
+            try:
+                logger.debug(f"Making API call to OpenAI for chunk {i}")
+                
+                response = client.chat.completions.create(
+                    model=self.config['llm']['model_name'],
+                    messages=[
+                        {"role": "system", "content": "You are an expert at extracting entities and relationships from text. Extract entities and their relationships from the following text. Format the output as JSON with 'entities' and 'relations' arrays. Each entity should have a 'type' and 'name' field. Each relation should have 'source', 'target', and 'type' fields."},
+                        {"role": "user", "content": f"Extract entities and relationships from this text:\n\n{text}"}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.1  # Lower temperature for more consistent output
+                )
+                
+                # Parse the response
+                extraction = json.loads(response.choices[0].message.content)
+                
+                # Add source information to entities and relations
+                entities_count = len(extraction.get('entities', []))
+                relations_count = len(extraction.get('relations', []))
+                logger.info(f"Extracted {entities_count} entities and {relations_count} relations from chunk {i}")
+                
+                for entity in extraction.get('entities', []):
+                    entity['source'] = {
+                        'file': str(file_path),
+                        'page': page,
+                        'chunk_index': chunk_index
+                    }
+                    result['entities'].append(entity)
+                
+                for relation in extraction.get('relations', []):
+                    relation['source'] = {
+                        'file': str(file_path),
+                        'page': page,
+                        'chunk_index': chunk_index
+                    }
+                    result['relations'].append(relation)
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing JSON response for chunk {i}: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Error extracting entities and relations from chunk {i}: {e}")
+                continue
+        
+        logger.info(f"Completed GraphRAG processing. Total entities: {len(result['entities'])}, Total relations: {len(result['relations'])}")
+        return result
 
     def _save_jsonl(self, data: List[Dict], output_path: Path):
         """Save data as JSONL file."""
@@ -574,4 +719,4 @@ class VisionModelHandler:
         """Convert PIL Image to base64 string."""
         buffered = io.BytesIO()
         image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode('utf-8') 
+        return base64.b64encode(buffered.getvalue()).decode('utf-8')
