@@ -1,0 +1,191 @@
+# Configuration file for GraphRAG-for-LEED project
+
+# Mode Configuration
+mode: "hybrid" # Options: "rag", "graphrag", "hybrid"
+mode_settings:
+  rag:
+    chunk_size: 1000
+    chunk_overlap: 200
+    embedding_model: "text-embedding-3-small"
+    retrieval_top_k: 5
+    use_reranker: true
+  graphrag:
+    min_confidence: 0.7
+    max_hop_distance: 3
+    use_entity_embeddings: true
+    use_relation_embeddings: true
+  hybrid:
+    rag_weight: 0.6
+    graphrag_weight: 0.4
+    fusion_method: "weighted_sum" # Options: "weighted_sum", "reciprocal_rank_fusion"
+    rerank_after_fusion: true
+
+# Logging Configuration
+logging:
+  level: INFO # Options: DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/kg_extractor.log"
+
+# Paths Configuration
+paths:
+  # Main data directories
+  data_dir: "./data"
+  raw_dir: "./data/raw" # Original input files
+  processed_dir: "./data/processed" # Intermediate processed files
+  output_dir: "./data/output" # Final output files
+
+  # RAG-specific paths
+  rag_dir: "./data/processed/rag" # RAG processed files
+  rag_output: "./data/processed/rag/combined.jsonl" # Combined RAG output
+
+  # GraphRAG-specific paths
+  graphrag_dir: "./data/processed/graphrag" # GraphRAG processed files
+  graphrag_output: "./data/processed/graphrag/combined.json" # Combined GraphRAG output
+
+  # Model and index paths
+  model_dir: "./models" # Directory for local models
+  faiss_index: "./data/output/faiss.index" # FAISS vector index
+  embeddings_dir: "./data/output/embeddings" # Saved embeddings
+
+  # Logging and configuration
+  logs_dir: "./logs" # Directory for logging
+  prompts_file: "./config/prompts.yaml" # Prompts configuration
+  debug_dir: "./debug" # Directory for debug outputs
+
+# Graph Configuration
+graph:
+  layout_seed: 42 # Seed for reproducible graph layouts
+  entity_colors: # Custom colors for entity types
+    CREDIT: "#FFB6C1" # Light pink
+    PREREQUISITE: "#98FB98" # Light green
+    POINT: "#87CEEB" # Sky blue
+    CATEGORY: "#DDA0DD" # Plum
+    CONCEPT: "#F0E68C" # Khaki
+    REQUIREMENT: "#4CAF50" # Green
+    METRIC: "#2196F3" # Blue
+
+# LLM Configuration
+llm:
+  provider: "openai" # Options: "openai", "anthropic", "local"
+  model_name: "gpt-4-turbo-preview" # Or path to local model
+  api_key: "" # Add your OpenAI API key here
+  temperature: 0.1
+  max_tokens: 1000
+  verbose: false
+
+# Model Registry - Define paths for local models
+model_registry:
+  LLAMA3: "/path/to/llama3/model"
+  MISTRAL: "/path/to/mistral/model"
+  # Add more local models as needed
+
+# Model Settings
+model_settings:
+  local:
+    max_batch_size: 4
+    device: "cuda" # or "cpu"
+    load_in_8bit: true
+    torch_dtype: "float16"
+    use_flash_attention: true
+    context_length: 4096
+
+# Knowledge Graph Configuration
+kg:
+  extraction_method: "llm" # Options: llm, rule
+  embedding_method: "TransE" # Options: TransE, Node2Vec, ComplEx, etc.
+
+# Knowledge Graph Extractor Configuration
+kg_extractor:
+  chunk_size: 1000
+  chunk_overlap: 200
+  batch_size: 5
+  max_retries: 3
+  retry_delay: 1
+  timeout: 30
+  include_source: true
+  return_triples: true # Return raw triples for diagnostics
+
+# Retrieval Configuration
+retrieval:
+  top_k: 5 # Top-k documents/subgraphs to retrieve
+  use_reranker: true # Whether to rerank retrieval results
+  reranker_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  reranker_top_k: 10
+  hybrid:
+    rag_weight: 0.6
+    graphrag_weight: 0.4
+    fusion_method: "weighted_sum"
+
+# Generation Configuration
+generation:
+  op_rag_enabled: true # Use Order-Preserving RAG (OP-RAG)
+  include_prompt_debug: true # Output raw prompt for debugging
+  max_length: 512
+  num_return_sequences: 1
+
+# Extraction Configuration
+extraction:
+  min_entity_length: 2 # Minimum length for entity text
+  max_entity_length: 100 # Maximum length for entity text
+  relation_types:
+    - "requires"
+    - "contributes_to"
+    - "is_part_of"
+    - "has_requirement"
+    - "related_to"
+    - "depends_on"
+    - "influences"
+    - "affects"
+    - "supports"
+    - "enables"
+
+# File Processing Configuration
+processing:
+  chunk_size: 1000 # Size of text chunks for processing
+  overlap: 100 # Overlap between chunks
+  supported_formats:
+    - ".pdf"
+    - ".xlsx"
+    - ".xls"
+    - ".docx"
+    - ".txt"
+    - ".csv"
+  image_extraction:
+    min_size: 100 # Minimum image size (pixels)
+    max_size: 2000 # Maximum image size (pixels)
+    formats:
+      - "PNG"
+      - "JPEG"
+      - "JPG"
+
+# Output Configuration
+output:
+  graph_prefix: "leed_v4" # Prefix for output files
+  return_triples: false # Whether to return and save raw triples
+  graph_formats: # Formats to save the knowledge graph in
+    - "json" # For programmatic access
+    - "html" # For interactive visualization
+    - "png" # For static visualization
+    - "graphml" # For graph analysis tools
+  include_metadata: true # Include metadata in output
+  pretty_print: true # Pretty print JSON output
+  compression: false # Enable/disable output compression
+  formats:
+    - json
+    - jsonl
+    - csv
+    - ttl
+  include_source_text: true
+  include_raw_triples: true
+  output_prefix: "kg_output"
+
+# Retry Settings
+retry:
+  max_attempts: 3 # Maximum number of retry attempts
+  initial_delay: 1 # Initial delay between retries in seconds
+  max_delay: 10 # Maximum delay between retries
+  backoff_factor: 2 # Exponential backoff factor
+  retry_on:
+    - ConnectionError
+    - TimeoutError
+    - RateLimitError

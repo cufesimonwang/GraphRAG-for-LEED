@@ -1,0 +1,326 @@
+# Prompts configuration for GraphRAG-for-LEED project
+
+# Content Extraction Prompts
+content_extraction:
+  diagram_extraction:
+    default: |
+      Analyze this diagram and extract all relationships between entities.
+      Focus on identifying:
+      1. Main entities and their types
+      2. Relationships between entities
+      3. Hierarchical structures
+      4. Dependencies and requirements
+
+      Format the output as a JSON object with:
+      {
+        "entities": [
+          {
+            "text": "entity text",
+            "type": "entity type",
+            "confidence": 0.95
+          }
+        ],
+        "relationships": [
+          {
+            "source": "source entity text",
+            "target": "target entity text",
+            "type": "relationship type",
+            "confidence": 0.95
+          }
+        ]
+      }
+
+    example: |
+      Example diagram analysis:
+      Input: A diagram showing LEED credits and prerequisites
+      Output: {
+        "entities": [
+          {"text": "Energy & Atmosphere", "type": "CATEGORY", "confidence": 0.95},
+          {"text": "EA Prerequisite 1", "type": "PREREQUISITE", "confidence": 0.95}
+        ],
+        "relationships": [
+          {
+            "source": "Energy & Atmosphere",
+            "target": "EA Prerequisite 1",
+            "type": "contains",
+            "confidence": 0.95
+          }
+        ]
+      }
+
+  text_extraction:
+    default: |
+      Extract key information from the following text:
+      {text}
+
+      Focus on:
+      1. Main concepts and requirements
+      2. Relationships between concepts
+      3. Hierarchical structures
+      4. Dependencies and prerequisites
+
+      Format the output as a JSON object with:
+      {
+        "entities": [
+          {
+            "text": "entity text",
+            "type": "entity type",
+            "confidence": 0.95
+          }
+        ],
+        "relationships": [
+          {
+            "source": "source entity text",
+            "target": "target entity text",
+            "type": "relationship type",
+            "confidence": 0.95
+          }
+        ]
+      }
+
+# Knowledge Graph Extraction Prompts
+kg_extraction:
+  entity_extraction:
+    default: |
+      Extract entities from the following text:
+      {text}
+
+      Focus on identifying:
+      1. LEED credits and prerequisites
+      2. Categories and subcategories
+      3. Requirements and metrics
+      4. Key concepts and terms
+
+      Format the output as a JSON array of entities:
+      [
+        {
+          "text": "entity text",
+          "type": "entity type",
+          "confidence": 0.95
+        }
+      ]
+
+  relation_extraction:
+    default: |
+      Extract knowledge graph triples from the following text. 
+      Each triple should have a subject, predicate, and object.
+      Return the triples as a JSON array of objects with 'subject', 'predicate', and 'object' fields.
+      Text: {text}
+
+  entity_inference:
+    default: |
+      Infer the type of the following entity:
+      Entity: {entity_text}
+      Context: {context}
+
+      Choose from these types:
+      - CREDIT: LEED credits and points
+      - PREREQUISITE: Required prerequisites
+      - POINT: Point values and metrics
+      - CATEGORY: Main categories
+      - CONCEPT: Key concepts
+      - REQUIREMENT: Specific requirements
+      - METRIC: Measurement metrics
+
+      Format the output as a JSON object:
+      {
+        "type": "inferred type",
+        "confidence": 0.95,
+        "explanation": "brief explanation"
+      }
+
+  relation_inference:
+    default: |
+      Infer the type of relationship between these entities:
+      Source: {source_entity}
+      Target: {target_entity}
+      Context: {context}
+
+      Choose from these types:
+      - requires: Direct requirement
+      - contributes_to: Contributes to achievement
+      - is_part_of: Part of a larger concept
+      - has_requirement: Has specific requirements
+      - related_to: Related concept
+      - depends_on: Dependency relationship
+      - influences: Influences outcome
+      - affects: Affects result
+      - supports: Supports achievement
+      - enables: Enables functionality
+
+      Format the output as a JSON object:
+      {
+        "type": "inferred type",
+        "confidence": 0.95,
+        "explanation": "brief explanation"
+      }
+
+# Graph Construction Prompts
+graph_construction:
+  node_creation:
+    default: |
+      Create a node for the following entity:
+      Entity: {entity_text}
+      Type: {entity_type}
+
+      Include these properties:
+      1. Unique identifier
+      2. Entity type
+      3. Confidence score
+      4. Source information
+      5. Metadata
+
+      Format the output as a JSON object:
+      {
+        "id": "unique_id",
+        "type": "entity_type",
+        "properties": {
+          "text": "entity_text",
+          "confidence": 0.95,
+          "source": "source_info",
+          "metadata": {}
+        }
+      }
+
+  edge_creation:
+    default: |
+      Create an edge between these nodes:
+      Source: {source_node}
+      Target: {target_node}
+      Type: {relation_type}
+
+      Include these properties:
+      1. Relationship type
+      2. Confidence score
+      3. Source information
+      4. Metadata
+
+      Format the output as a JSON object:
+      {
+        "source": "source_id",
+        "target": "target_id",
+        "type": "relation_type",
+        "properties": {
+          "confidence": 0.95,
+          "source": "source_info",
+          "metadata": {}
+        }
+      }
+
+# Retrieval Prompts
+retrieval:
+  query_expansion:
+    default: |
+      Expand the following query to improve retrieval:
+      Query: {query}
+
+      Generate:
+      1. Synonyms and related terms
+      2. Broader and narrower concepts
+      3. Alternative phrasings
+      4. Domain-specific terminology
+
+      Format the output as a JSON object:
+      {
+        "original": "original query",
+        "expanded": [
+          "expanded query 1",
+          "expanded query 2"
+        ],
+        "terms": [
+          "term 1",
+          "term 2"
+        ]
+      }
+
+  result_ranking:
+    default: |
+      Rank the following results by relevance:
+      Query: {query}
+      Results: {results}
+
+      Consider:
+      1. Semantic similarity
+      2. Entity overlap
+      3. Relationship relevance
+      4. Context matching
+
+      Format the output as a JSON array:
+      [
+        {
+          "result": "result text",
+          "score": 0.95,
+          "explanation": "ranking explanation"
+        }
+      ]
+
+  hybrid_fusion:
+    default: |
+      Combine results from RAG and GraphRAG:
+      RAG Results: {rag_results}
+      GraphRAG Results: {graphrag_results}
+
+      Consider:
+      1. Result relevance
+      2. Source diversity
+      3. Information completeness
+      4. Context coverage
+
+      Format the output as a JSON array:
+      [
+        {
+          "result": "combined result",
+          "score": 0.95,
+          "sources": ["rag", "graphrag"],
+          "explanation": "fusion explanation"
+        }
+      ]
+
+# Default Prompts
+defaults:
+  entity_extraction: |
+    Extract entities from the text, focusing on LEED credits, prerequisites, and requirements.
+    Format as JSON array of entities with text, type, and confidence.
+
+  relation_extraction: |
+    Extract relationships between entities, focusing on dependencies and requirements.
+    Format as JSON array of relationships with source, target, type, and confidence.
+
+  entity_inference: |
+    Infer the type of the entity from the context.
+    Choose from CREDIT, PREREQUISITE, POINT, CATEGORY, CONCEPT, REQUIREMENT, METRIC.
+
+  relation_inference: |
+    Infer the type of relationship between entities.
+    Choose from requires, contributes_to, is_part_of, has_requirement, related_to, depends_on, influences, affects, supports, enables.
+
+  kg_extraction:
+    relation_extraction: |
+      Extract knowledge graph triples from the following text. 
+      Each triple should have a subject, predicate, and object.
+      Return the triples as a JSON array of objects with 'subject', 'predicate', and 'object' fields.
+      Text: {text}
+
+    entity_type_inference: |
+      Infer the type of the following entity based on its context.
+      Entity: {text}
+      Context: {context}
+      Return the type as a string.
+
+    relation_type_inference: |
+      Infer the type of relationship between these entities based on the context.
+      Source: {source}
+      Target: {target}
+      Context: {context}
+      Return the relationship type as a string.
+
+  content_extraction:
+    text_extraction: |
+      Extract the main content from the following text.
+      Focus on extracting key information, facts, and relationships.
+      Text: {text}
+
+    image_analysis: |
+      Analyze the following image and extract any relevant text, diagrams, or visual elements.
+      Focus on extracting key information that could be relevant for knowledge graph construction.
+      Image: {image}
