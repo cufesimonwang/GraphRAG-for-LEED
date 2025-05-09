@@ -552,8 +552,21 @@ class ContentExtractor:
         total_chunks = len(content['text'])
         logger.info(f"Starting GraphRAG processing with {total_chunks} text chunks")
         
-        # Initialize OpenAI client
-        client = OpenAI(api_key=self.config['llm']['api_key'])
+        # Get LLM configuration
+        llm_config = self.config.get('llm', {})
+        provider = llm_config.get('provider', 'openai')
+        model_name = llm_config.get('model_name', 'gpt-4-turbo-preview')
+        api_key = llm_config.get('api_key')
+        
+        logger.info(f"Using LLM provider: {provider}, model: {model_name}")
+        
+        # Initialize LLM client based on provider
+        if provider == 'openai':
+            client = OpenAI(api_key=api_key)
+        elif provider == 'anthropic':
+            client = Anthropic(api_key=api_key)
+        else:
+            raise ValueError(f"Unsupported LLM provider: {provider}")
         
         # Process each text chunk
         for i, text_item in enumerate(content['text'], 1):
@@ -571,20 +584,33 @@ class ContentExtractor:
             
             # Extract entities and relations using LLM
             try:
-                logger.debug(f"Making API call to OpenAI for chunk {i}")
+                logger.debug(f"Making API call to {provider} for chunk {i}")
                 
-                response = client.chat.completions.create(
-                    model=self.config['llm']['model_name'],
-                    messages=[
-                        {"role": "system", "content": "You are an expert at extracting entities and relationships from text. Extract entities and their relationships from the following text. Format the output as JSON with 'entities' and 'relations' arrays. Each entity should have a 'type' and 'name' field. Each relation should have 'source', 'target', and 'type' fields."},
-                        {"role": "user", "content": f"Extract entities and relationships from this text:\n\n{text}"}
-                    ],
-                    response_format={"type": "json_object"},
-                    temperature=0.1  # Lower temperature for more consistent output
-                )
+                if provider == 'openai':
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": "You are an expert at extracting entities and relationships from text. Extract entities and their relationships from the following text. Format the output as JSON with 'entities' and 'relations' arrays. Each entity should have a 'type' and 'name' field. Each relation should have 'source', 'target', and 'type' fields."},
+                            {"role": "user", "content": f"Extract entities and relationships from this text:\n\n{text}"}
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.1
+                    )
+                    extraction = json.loads(response.choices[0].message.content)
                 
-                # Parse the response
-                extraction = json.loads(response.choices[0].message.content)
+                elif provider == 'anthropic':
+                    response = client.messages.create(
+                        model=model_name,
+                        max_tokens=1024,
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": f"You are an expert at extracting entities and relationships from text. Extract entities and their relationships from the following text. Format the output as JSON with 'entities' and 'relations' arrays. Each entity should have a 'type' and 'name' field. Each relation should have 'source', 'target', and 'type' fields.\n\nText to analyze:\n{text}"
+                            }
+                        ],
+                        temperature=0.1
+                    )
+                    extraction = json.loads(response.content[0].text)
                 
                 # Add source information to entities and relations
                 entities_count = len(extraction.get('entities', []))
