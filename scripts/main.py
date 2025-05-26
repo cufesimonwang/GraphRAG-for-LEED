@@ -4,9 +4,9 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-from .content_extractor import ContentExtractor
-from .kg.kg_extractor import KnowledgeGraphExtractor
-from .kg.graph_visualizer import GraphVisualizer
+from data_preprocessing.content_extractor import ContentExtractor
+from kg_construction.kg_extractor import KnowledgeGraphExtractor
+from kg_construction.graph_visualizer import GraphVisualizer
 
 def setup_logging(log_level: str = "INFO") -> None:
     """Set up logging configuration."""

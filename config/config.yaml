@@ -51,6 +51,15 @@ paths:
   logs_dir: "./logs" # Directory for logging
   prompts_file: "./config/prompts.yaml" # Prompts configuration
   debug_dir: "./debug" # Directory for debug outputs
+  jsonl_output_dir: "./data/processed/jsonl_output" # From ContentExtractor
+  rag_chunks_jsonl: "./data/output/all_chunks_for_rag.jsonl" # For VectorRetriever
+
+# Embedding Configuration
+embedding:
+  model_provider: "sentence-transformers" # Options: "openai", "sentence-transformers"
+  st_model_name: "all-MiniLM-L6-v2" # Example SentenceTransformer model
+  # openai_model: "text-embedding-3-small" # Example OpenAI model
+  dimension: 384 # Dimension of embeddings (e.g., 384 for all-MiniLM-L6-v2, 1536 for text-embedding-3-small)
 
 # Graph Configuration
 graph:
@@ -92,7 +101,15 @@ model_settings:
 # Knowledge Graph Configuration
 kg:
   extraction_method: "llm" # Options: llm, rule
-  embedding_method: "TransE" # Options: TransE, Node2Vec, ComplEx, etc.
+  # embedding_method: "TransE" # This seems more related to KG embeddings, not text chunk embeddings for retrieval
+
+# KG Builder Configuration (Added for clarity, if specific settings needed for builder)
+kg_builder:
+  embedding_model: 'all-MiniLM-L6-v2' # For entity deduplication, might be same as retrieval embedding
+  clustering:
+    distance_threshold: 0.75 # For AgglomerativeClustering, adjust based on embedding space
+    min_cluster_size_for_noise: 1
+
 
 # Knowledge Graph Extractor Configuration
 kg_extractor:
@@ -111,10 +128,20 @@ retrieval:
   use_reranker: true # Whether to rerank retrieval results
   reranker_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
   reranker_top_k: 10
-  hybrid:
+  # The 'hybrid' subsection under 'retrieval' is being removed. 
+  # Its settings are consolidated into 'hybrid_retriever'.
+  graph_retriever:
+    k_hop: 2 # Default k-hop distance for graph traversal
+    query_parsing_strategy: "llm" # Options: "llm", "heuristic"
+    # Optional: llm_model_for_parsing: "gpt-3.5-turbo-instruct" 
+    max_entities_from_query: 3 # Max entities to extract from query
+    paths_per_entity_limit: 10 # Max paths to retrieve per identified entity
+  hybrid_retriever: # Added section for HybridRetriever
     rag_weight: 0.6
-    graphrag_weight: 0.4
-    fusion_method: "weighted_sum"
+    graph_weight: 0.4
+    fusion_method: "weighted_sum" # Options: "weighted_sum", "reciprocal_rank_fusion"
+    use_reranker: true # Whether this specific retriever uses reranking for its components
+    reranker_model: "cross-encoder/ms-marco-MiniLM-L-6-v2" # Reranker model for Hybrid
 
 # Generation Configuration
 generation:
@@ -189,3 +216,10 @@ retry:
     - ConnectionError
     - TimeoutError
     - RateLimitError
+
+# Neo4j Configuration (Ensure this was added in the previous subtask)
+neo4j:
+  uri: "bolt://localhost:7687"
+  user: "neo4j"
+  password: "your_neo4j_password" # Replace with your actual password or use environment variables
+  database: "neo4j"

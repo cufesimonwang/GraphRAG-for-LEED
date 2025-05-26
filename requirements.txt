@@ -83,8 +83,11 @@ streamlit>=1.32,<1.36  # avoids conflict with tenacity and pillow
 # Testing
 pytest>=7.0.0
 
-# New additions
-python-slugify>=8.0.0  # for generating slugs from text
+# New additions by KG-Builder
+sentence-transformers>=2.2.0 # For embeddings
+scikit-learn>=1.0.0 # For clustering
+python-slugify>=8.0.0  # for generating slugs from text (used in kg_builder and kg_extractor)
+neo4j>=5.0.0 # For Neo4j database interaction
 
 # Additional dependencies
 accelerate>=0.20.0

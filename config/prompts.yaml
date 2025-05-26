@@ -102,12 +102,26 @@ kg_extraction:
 
   relation_extraction:
     default: |
-      Extract knowledge graph triples from the following text. 
-      Each triple should have a subject, predicate, and object.
-      Return the triples as a JSON array of objects with 'subject', 'predicate', and 'object' fields.
+      Extract knowledge graph triples from the following text.
+      For each triple, identify the head entity (subject), the relation (predicate), and the tail entity (object).
+      For each head and tail entity, provide its name and a likely type (e.g., Concept, Process, Material, Standard, Organization, Location, Metric, Requirement, Credit, Prerequisite, System, Equipment, Role, Document, Rating_System_Version, Space_Type, Performance_Criteria, Environmental_Impact, Mitigation_Strategy, Verification_Method, Threshold_Value, Certification_Level, Design_Phase, Construction_Phase, Operation_Phase, Policy, Regulation, Guideline, Best_Practice, Case_Study, Software_Tool, Data_Source, Professional_Credential, Educational_Resource, Event, Project, Building_Component, Utility, Resource, Waste_Stream, Pollutant, Health_Impact, Economic_Impact, Social_Impact, Life_Cycle_Stage, Performance_Indicator).
+      The relation should be a concise verb phrase.
+      Format the output as a JSON list of objects. Each object should have 'head_entity' (with 'name' and 'type'), 'relation', and 'tail_entity' (with 'name' and 'type').
+
+      Example:
+      Text: "LEED v4 requires commissioning for all projects."
+      Output:
+      [
+        {
+          "head_entity": {"name": "LEED v4", "type": "Rating_System_Version"},
+          "relation": "requires",
+          "tail_entity": {"name": "commissioning", "type": "Process"}
+        }
+      ]
+
       Text: {text}
 
-  entity_inference:
+  entity_inference: # This prompt might be deprecated if relation_extraction provides types
     default: |
       Infer the type of the following entity:
       Entity: {entity_text}
@@ -275,6 +289,16 @@ retrieval:
           "explanation": "fusion explanation"
         }
       ]
+    
+    query_to_entity_prompt: |
+      Extract up to 3 key entities or concepts from the following query related to LEED standards, building design, construction, or sustainability.
+      Focus on specific terms that are likely to be nodes in a knowledge graph.
+      Return them as a JSON list of strings.
+      For example, if the query is "What are the acoustic performance requirements for LEED v4 schools?",
+      you might return: ["acoustic performance requirements", "LEED v4", "schools"].
+      If the query is "Max LTV for composite wood", return ["composite wood", "LTV"].
+      Query: "{query}"
+
 
 # Default Prompts
 defaults:
@@ -296,12 +320,26 @@ defaults:
 
   kg_extraction:
     relation_extraction: |
-      Extract knowledge graph triples from the following text. 
-      Each triple should have a subject, predicate, and object.
-      Return the triples as a JSON array of objects with 'subject', 'predicate', and 'object' fields.
+      Extract knowledge graph triples from the following text.
+      For each triple, identify the head entity (subject), the relation (predicate), and the tail entity (object).
+      For each head and tail entity, provide its name and a likely type (e.g., Concept, Process, Material, Standard, Organization, Location, Metric, Requirement, Credit, Prerequisite, System, Equipment, Role, Document, Rating_System_Version, Space_Type, Performance_Criteria, Environmental_Impact, Mitigation_Strategy, Verification_Method, Threshold_Value, Certification_Level, Design_Phase, Construction_Phase, Operation_Phase, Policy, Regulation, Guideline, Best_Practice, Case_Study, Software_Tool, Data_Source, Professional_Credential, Educational_Resource, Event, Project, Building_Component, Utility, Resource, Waste_Stream, Pollutant, Health_Impact, Economic_Impact, Social_Impact, Life_Cycle_Stage, Performance_Indicator).
+      The relation should be a concise verb phrase.
+      Format the output as a JSON list of objects. Each object should have 'head_entity' (with 'name' and 'type'), 'relation', and 'tail_entity' (with 'name' and 'type').
+
+      Example:
+      Text: "LEED v4 requires commissioning for all projects."
+      Output:
+      [
+        {
+          "head_entity": {"name": "LEED v4", "type": "Rating_System_Version"},
+          "relation": "requires",
+          "tail_entity": {"name": "commissioning", "type": "Process"}
+        }
+      ]
+
       Text: {text}
 
-    entity_type_inference: |
+    entity_type_inference: | # This prompt might be deprecated if relation_extraction provides types
       Infer the type of the following entity based on its context.
       Entity: {text}
       Context: {context}
@@ -324,3 +362,28 @@ defaults:
       Analyze the following image and extract any relevant text, diagrams, or visual elements.
       Focus on extracting key information that could be relevant for knowledge graph construction.
       Image: {image}
+
+# Generation Prompts
+generation:
+  response_generation: |
+    You are an expert Q&A system for LEED sustainability standards.
+    Answer the following Query based on the provided Document Excerpts and Knowledge Graph Paths.
+    When possible, cite the 'Chunk ID' or 'KG Path ID' from the context you used to formulate your answer.
+    List the cited Chunk IDs and KG Path IDs under a 'Sources Used:' section.
+
+    Query: {query}
+
+    Document Excerpts:
+    ---
+    {formatted_chunks}
+    ---
+
+    Knowledge Graph Paths:
+    ---
+    {formatted_kg_paths}
+    ---
+
+    Answer:
+    [Your comprehensive answer here]
+
+    Sources Used: [Example: Chunk ID: chunk_xyz, KG Path ID: kgpath_123]
