@@ -41,7 +41,7 @@ class GraphManager:
 
     def _get_default_prompts(self) -> Dict:
         """Return default prompts if prompts.yaml is not found."""
-        return self.prompts.get('defaults', {})
+        return getattr(self, 'prompts', {}).get('defaults', {})
 
     def _setup_logging(self):
         """Configure logging based on config settings."""
